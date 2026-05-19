@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mandala Grid Generator — v4</title>
+  <meta name="description" content="Precision radial mandala grid generator with accurate MM scaling, drawing tools, and high-res export.">
+  <meta name="theme-color" content="#7c5cfc">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="grid.ico">
+
+  <!-- Apple PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Grid Maker">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+
+<body>
+
+  <header class="app-header">
+    <h1>⊙ Mandala Grid Generator</h1>
+    <p class="subtitle">Precision Radial Grids · Accurate MM Scaling</p>
+  </header>
+
+  <main class="app-container">
+
+    <!-- Left: Parameters -->
+    <aside class="controls-panel panel">
+      <button class="btn btn-primary" id="btnEnterDrawMode"
+        style="width: 100%; margin-bottom: 1.5rem; height: 55px; font-size: 1.2rem; border-radius: 14px; box-shadow: 0 10px 20px rgba(124, 92, 252, 0.3);">
+        ✎ Start Drawing (Fullscreen)
+      </button>
+
+      <div class="panel-title">
+        <span class="icon">⚙</span> Grid Parameters
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Canvas</div>
+        <div class="form-group">
+          <label for="diameter">Diameter <span class="unit">(mm)</span></label>
+          <input type="number" id="diameter" value="200" min="10" max="3000" step="1"
+            oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(this.value) : null">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Base Grid Configuration</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="radialLines">Radial Lines</label>
+            <input type="number" id="radialLines" value="12" min="2" max="360" step="1">
+          </div>
+          <div class="form-group">
+            <label for="circularGrids">Circular Rings</label>
+            <input type="number" id="circularGrids" value="6" min="1" max="200" step="1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstRingDist">1st Ring Dist <span class="unit">(mm)</span></label>
+            <input type="number" id="firstRingDist" value="15" min="1" max="1000" step="0.5">
+          </div>
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label for="ringSpacing">Spacing <span class="unit">(mm)</span></label>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <input type="checkbox" id="autoSpacing" style="width: 12px; height: 12px; margin: 0;">
+                <label for="autoSpacing"
+                  style="font-size: 0.6rem; color: var(--accent-secondary); margin: 0; cursor: pointer;">Auto</label>
+              </div>
+            </div>
+            <input type="number" id="ringSpacing" value="15" min="0.1" max="500" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Visuals</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="lineThickness">Line Weight <span class="unit">(px)</span></label>
+            <input type="number" id="lineThickness" value="1" min="0.1" max="10" step="0.1">
+          </div>
+          <div class="form-group">
+            <label for="numberSize">Number Size <span class="unit">(mm)</span></label>
+            <input type="number" id="numberSize" value="3" min="1" max="20" step="0.5">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="lineColor">Line Color</label>
+            <input type="color" id="lineColor" value="#000000">
+          </div>
+          <div class="form-group">
+            <label for="bgColor">Background</label>
+            <input type="color" id="bgColor" value="#ffffff">
+          </div>
+        </div>
+
+        <div class="checkbox-grid">
+          <div class="check-item">
+            <input type="checkbox" id="showCenter" checked>
+            <label for="showCenter">Center Dot</label>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" id="showOuterRing" checked>
+            <label for="showOuterRing">Outer Ring</label>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" id="showNumbers" checked>
+            <label for="showNumbers">Numbers</label>
+          </div>
+          <div class="check-item">
+            <input type="checkbox" id="showMmScale" checked>
+            <label for="showMmScale">MM Scale</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Painting Tools</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="brushSize">Brush Size</label>
+            <input type="range" id="brushSize" value="3" min="1" max="50" step="1" style="padding: 0;">
+          </div>
+          <div class="form-group" style="flex: 0 0 50px;">
+            <label>&nbsp;</label>
+            <div id="brushSizeVal" style="font-size: 0.8rem; color: var(--accent-secondary); font-weight: 600;">3px
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="paintColor">Brush Color</label>
+            <input type="color" id="paintColor" value="#7c5cfc">
+          </div>
+          <div class="form-group">
+            <label for="symmetryCount">Symmetries</label>
+            <input type="number" id="symmetryCount" value="12" min="1" max="360" step="1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Color Palette</label>
+          <div id="paletteContainer" class="palette-container">
+            <!-- Palettes will be injected here -->
+          </div>
+        </div>
+
+        <div class="check-item" style="margin-bottom: 0.8rem;">
+          <input type="checkbox" id="eraserMode">
+          <label for="eraserMode">Eraser Mode</label>
+        </div>
+
+        <button class="btn btn-secondary" id="btnClearPaint"
+          style="width: 100%; border-color: var(--danger); color: var(--danger);">
+          🗑 Clear Painting
+        </button>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Export</div>
+        <div class="form-group">
+          <select id="exportDpi">
+            <option value="150">150 DPI</option>
+            <option value="300" selected>300 DPI — Optimal</option>
+            <option value="600">600 DPI — High Res</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="info-bar">
+        <div class="info-row"><span>Export Image:</span><span class="info-value" id="infoExportSize">—</span></div>
+        <div class="info-row"><span>Total Lines:</span><span class="info-value" id="infoRingCount">—</span></div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" id="btnExportJpeg">📷 JPEG</button>
+        <button class="btn btn-success" id="btnExportPng">🖼 PNG</button>
+      </div>
+      <button class="btn btn-primary" id="btnExportSTL" style="width: 100%; margin-top: 0.5rem; background: linear-gradient(135deg, #4f46e5, #3730a3);">🧊 Convert to STL (3D Print)</button>
+
+      <button class="btn btn-accent" id="btnSaveDesign" style="width: 100%; margin-top: 0.5rem; background: #6366f1;">💾
+        Save Design</button>
+      <button class="btn btn-secondary" id="btnReset" style="width: 100%; margin-top: 0.5rem;">↺ Reset All</button>
+
+      <div class="form-section" style="margin-top: 1.5rem; border-top: 1px solid #eee; padding-top: 1rem;">
+        <div class="form-section-label">Saved Designs</div>
+        <div id="designGallery" class="design-gallery-grid">
+          <p class="empty-msg">No saved designs</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: Live Canvas -->
+    <section class="canvas-panel panel">
+      <div class="canvas-wrapper" id="scrollWrapper">
+        <div class="canvas-layers" id="canvasLayers" style="position: relative; line-height: 0;">
+          <canvas id="mandalaCanvas" style="position: relative; z-index: 1;"></canvas>
+          <!-- Dynamic paint layers will be injected here -->
+        </div>
+        <button class="canvas-draw-btn" id="btnCanvasDraw" title="Enter Draw Mode">
+          ✎ Draw
+        </button>
+      </div>
+      <div class="scale-info">
+        Numbers align clockwise · MM Scale shown on opposite radial
+      </div>
+    </section>
+
+    <!-- Right: Addition Tools & Layers -->
+    <aside class="insert-panel panel">
+      <div class="panel-title">
+        <span class="icon">📑</span> Layers
+      </div>
+
+      <div class="form-section">
+        <div class="layers-list" id="layersList">
+          <!-- Layers items injected here -->
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnAddLayer" style="width: 100%; margin-top: 0.5rem;">
+          ⊕ Add New Layer
+        </button>
+      </div>
+
+      <div class="panel-title" style="margin-top: 1.5rem;">
+        <span class="icon">＋</span> Addition Tools
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Add Ring at Radius</div>
+        <div class="form-group">
+          <label for="insertRingMM">Target Radius <span class="unit">(mm)</span></label>
+          <input type="number" id="insertRingMM" placeholder="e.g. 45.0" step="0.5">
+        </div>
+        <button class="btn btn-accent btn-sm" id="btnInsertRingMM" style="background: #333; color: white;">⊕ Add
+          Ring</button>
+        <div class="inserted-list" id="insertedRingsList"></div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Add Partial Radial</div>
+        <div class="form-group">
+          <label for="insertRadialAfter">Insert Between</label>
+          <select id="insertRadialAfter"></select>
+        </div>
+        <div class="form-group">
+          <label for="insertRadialFromRing">Starts From</label>
+          <select id="insertRadialFromRing"></select>
+        </div>
+        <div class="btn-group" style="margin-top: 0;">
+          <button class="btn btn-accent btn-sm" id="btnInsertRadial" style="background: #333; color: white;">⊕
+            Single</button>
+          <button class="btn btn-accent btn-sm" id="btnInsertBetweenAll" style="background: #333; color: white;">⊕
+            Between All</button>
+        </div>
+        <div class="inserted-list" id="insertedRadialsList"></div>
+      </div>
+
+      <!-- Space for additional footer tools -->
+
+    </aside>
+
+  </main>
+
+  <div class="toast" id="toast">
+    <span class="toast-icon">✅</span>
+    <span class="toast-msg">Exported!</span>
+  </div>
+
+  <div class="draw-mode-overlay" id="drawModeOverlay">
+    <div class="draw-top-bar">
+      <div class="draw-bar-left">
+        <button class="draw-action-btn" id="btnExitDrawMode" title="Back to Settings">
+          <span class="icon">⬅</span> Exit
+        </button>
+      </div>
+
+      <div class="draw-bar-center">
+        <div class="draw-brush-control">
+          <span class="icon" style="font-size: 0.8rem;">⚪</span>
+          <input type="range" id="drawBrushSize" value="3" min="1" max="50" step="1" title="Brush Size">
+          <span id="drawBrushSizeVal" style="font-size: 0.7rem; min-width: 25px;">3px</span>
+        </div>
+
+        <div class="draw-color-selector">
+          <div class="color-dot" id="colorDot" style="background-color: #7c5cfc;"></div>
+          <div class="color-picker-flyout" id="colorPickerFlyout">
+            <div class="shade-adjuster">
+              <label style="font-size: 0.65rem; color: var(--text-muted);">Brightness</label>
+              <input type="range" id="shadeLightness" min="0" max="100" value="50" step="1" title="Lightness">
+              <label style="font-size: 0.65rem; color: var(--text-muted); margin-top: 5px;">Saturation</label>
+              <input type="range" id="shadeSaturation" min="0" max="100" value="100" step="1" title="Saturation">
+            </div>
+
+            <div id="paletteFlyoutGrid" class="palette-container">
+              <!-- Palette injected here -->
+            </div>
+          </div>
+        </div>
+
+        <div class="draw-tool-group">
+          <button class="draw-tool-btn" id="btnUndoDraw" title="Undo (2-finger tap)">
+            <span class="icon">↩</span>
+          </button>
+          <button class="draw-tool-btn" id="btnRedoDraw" title="Redo (3-finger tap)">
+            <span class="icon">↪</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="draw-bar-right">
+        <div class="pencil-only-toggle">
+          <input type="checkbox" id="pencilOnlyMode">
+          <label for="pencilOnlyMode">
+            <span class="icon">✏️</span> Pencil Only
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="draw-canvas-container" id="drawCanvasContainer">
+      <!-- The canvas will be moved here in Draw Mode -->
+    </div>
+  </div>
+
+  <script src="app.js?v=4"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(registration => {
+          console.log('ServiceWorker registration successful');
+        }).catch(err => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
