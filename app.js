@@ -528,12 +528,18 @@
 
         // Painting Logic
         function getCoords(e) {
-            // Get the rect of the actual canvas we are drawing on
-            const activeCanvas = state.layers[0] ? state.layers[0].canvas : document.getElementById('mandalaCanvas');
-            const rect = activeCanvas.getBoundingClientRect();
+            // Use canvasContainer (the transformed element) for the reference rect.
+            // With transform-origin:0 0, translate(panX,panY) scale(zoom):
+            //   rect.left = naturalLeft + panX
+            //   rect.width = canvasPixelWidth * zoom
+            // So: canvasX = (clientX - rect.left) / zoom = (clientX - rect.left) * (canvasW / rect.width)
+            const rect = canvasContainer.getBoundingClientRect();
+            const gridCanvas = document.getElementById('mandalaCanvas');
+            const canvasW = gridCanvas.width;
+            const canvasH = gridCanvas.height;
 
-            const scaleX = activeCanvas.width / rect.width;
-            const scaleY = activeCanvas.height / rect.height;
+            const scaleX = canvasW / rect.width;
+            const scaleY = canvasH / rect.height;
 
             let clientX, clientY;
             if (e.touches && e.touches.length > 0) {
@@ -794,9 +800,10 @@
             }
         };
 
-        // --- NEW: Zoom & Pan Logic ---
+        // --- Zoom & Pan Logic ---
 
         function updateTransform() {
+            canvasContainer.style.transformOrigin = '0 0';
             canvasContainer.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
         }
 
@@ -840,15 +847,21 @@
                 const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
-                // Zoom around center of pinch
                 const zoomFactor = dist / state.lastTouchDist;
                 const newZoom = Math.min(Math.max(0.5, state.zoom * zoomFactor), 8);
 
-                // Offset adjustment to zoom at pinch center
-                state.panX = midX - (midX - state.panX) * (newZoom / state.zoom);
-                state.panY = midY - (midY - state.panY) * (newZoom / state.zoom);
+                // Get the container's current rendered position (accounts for current panX/panY)
+                // With transform-origin:0 0 and translate(panX,panY) scale(zoom):
+                //   screen position of canvas point (cx, cy) = (rect.left + cx*zoom, rect.top + cy*zoom)
+                //   where rect.left = naturalLeft + panX
+                // To keep finger midpoint fixed on the same canvas point during zoom:
+                //   newPanX = panX + (midX - rect.left) * (1 - newZoom/zoom)
+                const rect = canvasContainer.getBoundingClientRect();
+                const scaleFactor = newZoom / state.zoom;
+                state.panX += (midX - rect.left) * (1 - scaleFactor);
+                state.panY += (midY - rect.top) * (1 - scaleFactor);
 
-                // Add panning while pinching
+                // Also pan by finger midpoint movement
                 state.panX += (midX - state.lastTouchX);
                 state.panY += (midY - state.lastTouchY);
 
@@ -858,7 +871,7 @@
                 state.lastTouchY = midY;
                 updateTransform();
             } else if (e.touches.length === 1 && pencilOnlyMode.checked && e.touches[0].touchType !== 'stylus') {
-                // Pan with one finger in Pencil Only
+                // Pan with one finger in Pencil Only mode
                 e.preventDefault();
                 state.panX += (e.touches[0].clientX - state.lastTouchX);
                 state.panY += (e.touches[0].clientY - state.lastTouchY);
