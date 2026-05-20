@@ -119,7 +119,7 @@
             showMmScale: true
         };
 
-        const ZOOM_SCALE = 3; // 3x oversampling for crisp zooming on high-res displays
+        const ZOOM_SCALE = 4; // 4x oversampling for crisp zooming on high-res displays
 
         function mmToPixels(mm, dpi) { return (mm / 25.4) * dpi; }
 
