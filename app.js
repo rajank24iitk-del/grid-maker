@@ -193,8 +193,8 @@
             const totalPx = Math.round(mmToPixels(totalMM, dpiCap));
 
             canvas.width = canvas.height = totalPx * ZOOM_SCALE;
-            canvas.style.width = totalPx + 'px';
-            canvas.style.height = totalPx + 'px';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
 
             ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
 
@@ -366,8 +366,8 @@
             const px = Math.round(mmToPixels(totalMM, 96));
 
             canvas.width = canvas.height = px * ZOOM_SCALE;
-            canvas.style.width = px + 'px';
-            canvas.style.height = px + 'px';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
             canvas.style.position = 'absolute';
             canvas.style.top = '0';
             canvas.style.left = '0';
@@ -663,8 +663,8 @@
 
                 const oldW = l.canvas.width; const oldH = l.canvas.height;
                 l.canvas.width = l.canvas.height = targetInternalPx;
-                l.canvas.style.width = targetPx + 'px';
-                l.canvas.style.height = targetPx + 'px';
+                l.canvas.style.width = '100%';
+                l.canvas.style.height = '100%';
                 // Center the image using integer math to match rotation centers
                 l.ctx.drawImage(temp, Math.round((targetInternalPx - oldW) / 2), Math.round((targetInternalPx - oldH) / 2));
             });
@@ -1170,12 +1170,14 @@
             if (state.layers.length > 0 && state.layers[0].canvas.width !== targetInternalPx) {
                 resizePaintLayers(totalPx);
                 canvasContainer.style.width = totalPx + 'px';
-                canvasContainer.style.height = totalPx + 'px';
+                canvasContainer.style.height = 'auto';
+                canvasContainer.style.aspectRatio = '1 / 1';
             }
             originalDraw();
             // Sync container display size to grid size
             canvasContainer.style.width = totalPx + 'px';
-            canvasContainer.style.height = totalPx + 'px';
+            canvasContainer.style.height = 'auto';
+            canvasContainer.style.aspectRatio = '1 / 1';
         };
     }
 
