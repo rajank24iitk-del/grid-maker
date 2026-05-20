@@ -557,6 +557,12 @@
         }
 
         function startPaint(e) {
+            // Only allow drawing when Draw Mode (fullscreen overlay) is active.
+            // This prevents accidental finger drawing on the main settings screen.
+            if (!drawModeOverlay.classList.contains('active')) {
+                return;
+            }
+
             // Prevent drawing if more than one touch (pinch/zoom)
             // But ALLOW the touch event to propagate so the browser can handle the pinch
             if (e.touches && e.touches.length > 1) {
