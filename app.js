@@ -68,7 +68,7 @@
         const normalCanvasContainer = document.getElementById('scrollWrapper');
         const colorDot = document.getElementById('colorDot');
         const colorPickerFlyout = document.getElementById('colorPickerFlyout');
-        const pencilOnlyMode = document.getElementById('pencilOnlyMode');
+        const drawWithHand = document.getElementById('drawWithHand');
         const btnUndoDraw = document.getElementById('btnUndoDraw');
         const btnRedoDraw = document.getElementById('btnRedoDraw');
         const btnCanvasDraw = document.getElementById('btnCanvasDraw');
@@ -564,9 +564,9 @@
                 return;
             }
 
-            // Pencil Only Mode Check
-            // We ignore touches for DRAWING, but we don't preventDefault them if they are multi-touch
-            if (pencilOnlyMode.checked && e.pointerType === 'touch') {
+            // Hand Drawing Mode Check — by default, finger touches do NOT draw.
+            // Only allow finger drawing when the user has explicitly enabled Hand Drawing.
+            if (!drawWithHand.checked && e.pointerType === 'touch') {
                 return;
             }
 
@@ -827,8 +827,8 @@
                 state.lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 state.lastTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             } else if (e.touches.length === 1) {
-                // Single touch might be panning if Pencil Only is on and it's NOT a pen
-                if (pencilOnlyMode.checked && e.touches[0].touchType !== 'stylus') {
+                // Single finger pans the canvas when Hand Drawing is OFF (default)
+                if (!drawWithHand.checked && e.touches[0].touchType !== 'stylus') {
                     state.isDrawing = false;
                     state.lastTouchX = e.touches[0].clientX;
                     state.lastTouchY = e.touches[0].clientY;
@@ -870,7 +870,7 @@
                 state.lastTouchX = midX;
                 state.lastTouchY = midY;
                 updateTransform();
-            } else if (e.touches.length === 1 && pencilOnlyMode.checked && e.touches[0].touchType !== 'stylus') {
+            } else if (e.touches.length === 1 && !drawWithHand.checked && e.touches[0].touchType !== 'stylus') {
                 // Pan with one finger in Pencil Only mode
                 e.preventDefault();
                 state.panX += (e.touches[0].clientX - state.lastTouchX);

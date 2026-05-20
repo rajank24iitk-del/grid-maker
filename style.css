@@ -1050,17 +1050,17 @@ input[type="range"]::-webkit-slider-thumb {
   }
 }
 
-/* Pencil Only Toggle */
-.pencil-only-toggle {
+/* Hand Drawing Toggle — OFF by default, green when enabled */
+.hand-draw-toggle {
   display: flex;
   align-items: center;
 }
 
-.pencil-only-toggle input {
+.hand-draw-toggle input {
   display: none;
 }
 
-.pencil-only-toggle label {
+.hand-draw-toggle label {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
   padding: 0.5rem 1rem;
@@ -1072,12 +1072,21 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   gap: 0.5rem;
   transition: all var(--transition);
+  color: var(--text-muted);
+  user-select: none;
 }
 
-.pencil-only-toggle input:checked+label {
-  background: var(--accent-glow);
-  border-color: var(--accent);
-  color: white;
+.hand-draw-toggle label:hover {
+  border-color: var(--success);
+  color: var(--text-secondary);
+}
+
+/* When Hand Drawing is ON — glow green to make it obvious */
+.hand-draw-toggle input:checked + label {
+  background: rgba(0, 212, 170, 0.15);
+  border-color: var(--success);
+  color: var(--success);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.25);
 }
 
 /* Canvas in Draw Mode */
