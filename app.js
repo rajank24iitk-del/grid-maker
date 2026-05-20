@@ -77,6 +77,7 @@
         const shadeLightness = document.getElementById('shadeLightness');
         const shadeSaturation = document.getElementById('shadeSaturation');
         const paletteFlyoutGrid = document.getElementById('paletteFlyoutGrid');
+        const btnQuickEraser = document.getElementById('btnQuickEraser');
 
         let state = {
             baseRings: [],
@@ -811,24 +812,51 @@
             colorDot.style.backgroundColor = state.activeColor;
         };
 
+        if (btnQuickEraser) {
+            btnQuickEraser.onclick = () => {
+                paintInputs.eraserMode.checked = !paintInputs.eraserMode.checked;
+                if (paintInputs.eraserMode.checked) {
+                    btnQuickEraser.classList.add('active-eraser');
+                } else {
+                    btnQuickEraser.classList.remove('active-eraser');
+                }
+            };
+            
+            paintInputs.eraserMode.addEventListener('change', () => {
+                if (paintInputs.eraserMode.checked) {
+                    btnQuickEraser.classList.add('active-eraser');
+                } else {
+                    btnQuickEraser.classList.remove('active-eraser');
+                }
+            });
+        }
+
         shadeLightness.oninput = shadeSaturation.oninput = () => {
             if (state.lastBaseColor) {
                 updateAppColor(applyShades(state.lastBaseColor));
             }
         };
 
-        // --- Zoom & Pan Logic ---
+        // --- Zoom & Pan Logic (Hardware Accelerated) ---
 
-        function updateTransform() {
-            canvasContainer.style.transformOrigin = '0 0';
-            canvasContainer.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+        let transformRAF = null;
+        function requestUpdateTransform() {
+            if (!transformRAF) {
+                transformRAF = requestAnimationFrame(() => {
+                    canvasContainer.style.transformOrigin = '0 0';
+                    canvasContainer.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale3d(${state.zoom}, ${state.zoom}, 1)`;
+                    transformRAF = null;
+                });
+            }
         }
 
         function resetTransform() {
             state.zoom = 1;
             state.panX = 0;
             state.panY = 0;
-            updateTransform();
+            state.layoutLeft = undefined;
+            state.layoutTop = undefined;
+            requestUpdateTransform();
         }
 
         canvasContainer.addEventListener('touchstart', (e) => {
@@ -843,6 +871,11 @@
                 state.lastTouchDist = Math.sqrt(dx * dx + dy * dy);
                 state.lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 state.lastTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                // Cache the true layout position to prevent layout thrashing
+                const rect = canvasContainer.getBoundingClientRect();
+                state.layoutLeft = rect.left - state.panX;
+                state.layoutTop = rect.top - state.panY;
             } else if (e.touches.length === 1) {
                 // Single finger pans the canvas when Hand Drawing is OFF (default)
                 if (!drawWithHand.checked && e.touches[0].touchType !== 'stylus') {
@@ -867,16 +900,18 @@
                 const zoomFactor = dist / state.lastTouchDist;
                 const newZoom = Math.min(Math.max(0.5, state.zoom * zoomFactor), 8);
 
-                // Get the container's current rendered position (accounts for current panX/panY)
-                // With transform-origin:0 0 and translate(panX,panY) scale(zoom):
-                //   screen position of canvas point (cx, cy) = (rect.left + cx*zoom, rect.top + cy*zoom)
-                //   where rect.left = naturalLeft + panX
-                // To keep finger midpoint fixed on the same canvas point during zoom:
-                //   newPanX = panX + (midX - rect.left) * (1 - newZoom/zoom)
-                const rect = canvasContainer.getBoundingClientRect();
+                // Compute rect mathematically without reading DOM (no thrashing)
+                if (state.layoutLeft === undefined) {
+                    const rect = canvasContainer.getBoundingClientRect();
+                    state.layoutLeft = rect.left - state.panX;
+                    state.layoutTop = rect.top - state.panY;
+                }
+                const rectLeft = state.layoutLeft + state.panX;
+                const rectTop = state.layoutTop + state.panY;
+
                 const scaleFactor = newZoom / state.zoom;
-                state.panX += (midX - rect.left) * (1 - scaleFactor);
-                state.panY += (midY - rect.top) * (1 - scaleFactor);
+                state.panX += (midX - rectLeft) * (1 - scaleFactor);
+                state.panY += (midY - rectTop) * (1 - scaleFactor);
 
                 // Also pan by finger midpoint movement
                 state.panX += (midX - state.lastTouchX);
@@ -886,7 +921,8 @@
                 state.lastTouchDist = dist;
                 state.lastTouchX = midX;
                 state.lastTouchY = midY;
-                updateTransform();
+                
+                requestUpdateTransform();
             } else if (e.touches.length === 1 && !drawWithHand.checked && e.touches[0].touchType !== 'stylus') {
                 // Pan with one finger in Pencil Only mode
                 e.preventDefault();
@@ -894,7 +930,8 @@
                 state.panY += (e.touches[0].clientY - state.lastTouchY);
                 state.lastTouchX = e.touches[0].clientX;
                 state.lastTouchY = e.touches[0].clientY;
-                updateTransform();
+                
+                requestUpdateTransform();
             }
         }, { passive: false });
 

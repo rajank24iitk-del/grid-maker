@@ -942,6 +942,12 @@ input[type="range"]::-webkit-slider-thumb {
   justify-content: center;
 }
 
+.draw-tool-btn.active-eraser {
+  background: rgba(255, 77, 106, 0.2);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* Color Selector Dot */
 .draw-color-selector {
   position: relative;

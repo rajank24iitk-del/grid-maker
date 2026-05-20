@@ -292,6 +292,10 @@
           <span id="drawBrushSizeVal" style="font-size: 0.7rem; min-width: 25px;">3px</span>
         </div>
 
+        <button class="draw-tool-btn" id="btnQuickEraser" title="Toggle Eraser" style="border-radius: 50%; font-size: 1.2rem; margin-left: 10px;">
+          ✎
+        </button>
+
         <div class="draw-color-selector">
           <div class="color-dot" id="colorDot" style="background-color: #7c5cfc;"></div>
           <div class="color-picker-flyout" id="colorPickerFlyout">
@@ -333,7 +337,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
