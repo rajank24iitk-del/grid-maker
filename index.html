@@ -287,10 +287,11 @@
       </div>
 
       <div class="draw-bar-center">
-        <div class="draw-brush-control">
-          <span class="icon" style="font-size: 0.8rem;">⚪</span>
+        <div class="draw-brush-control" style="display: flex; align-items: center; gap: 10px;">
+          <button class="draw-tool-btn" id="btnBrushDec" title="Decrease Brush Size" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; padding: 0;">-</button>
           <input type="range" id="drawBrushSize" value="3" min="1" max="50" step="1" title="Brush Size">
-          <span id="drawBrushSizeVal" style="font-size: 0.7rem; min-width: 25px;">3px</span>
+          <button class="draw-tool-btn" id="btnBrushInc" title="Increase Brush Size" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; padding: 0;">+</button>
+          <span id="drawBrushSizeVal" style="font-size: 0.7rem; min-width: 25px; text-align: right;">3px</span>
         </div>
 
         <button class="draw-tool-btn" id="btnQuickEraser" title="Toggle Eraser" style="border-radius: 50%; font-size: 1.2rem; margin-left: 10px;">

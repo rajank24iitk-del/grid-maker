@@ -861,6 +861,19 @@
             paintInputs.brushSizeVal.textContent = `${drawBrushSize.value}px`;
         };
 
+        const btnBrushDec = document.getElementById('btnBrushDec');
+        const btnBrushInc = document.getElementById('btnBrushInc');
+        if (btnBrushDec && btnBrushInc) {
+            btnBrushDec.onclick = () => {
+                drawBrushSize.value = Math.max(parseInt(drawBrushSize.min) || 1, parseInt(drawBrushSize.value) - 1);
+                drawBrushSize.oninput();
+            };
+            btnBrushInc.onclick = () => {
+                drawBrushSize.value = Math.min(parseInt(drawBrushSize.max) || 50, parseInt(drawBrushSize.value) + 1);
+                drawBrushSize.oninput();
+            };
+        }
+
         paintInputs.brushSize.addEventListener('input', () => {
             drawBrushSize.value = paintInputs.brushSize.value;
             drawBrushSizeVal.textContent = `${paintInputs.brushSize.value}px`;
