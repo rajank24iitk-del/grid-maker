@@ -39,6 +39,7 @@
             paintColor: document.getElementById('paintColor'),
             symmetryCount: document.getElementById('symmetryCount'),
             eraserMode: document.getElementById('eraserMode'),
+            mirrorGrid: document.getElementById('mirrorGrid'),
             paletteContainer: document.getElementById('paletteContainer'),
             btnClearPaint: document.getElementById('btnClearPaint')
         };
@@ -633,16 +634,33 @@
             }
 
 
-            for (let i = 0; i < sym; i++) {
+            const mirror = paintInputs.mirrorGrid && paintInputs.mirrorGrid.checked;
+            const steps = mirror ? sym / 2 : sym;
+            const angleStep = mirror ? (4 * Math.PI) / sym : (2 * Math.PI) / sym;
+
+            for (let i = 0; i < steps; i++) {
                 pCtx.save();
                 pCtx.translate(cx, cy);
-                pCtx.rotate((i * 2 * Math.PI) / sym);
+                pCtx.rotate(i * angleStep);
                 pCtx.translate(-cx, -cy);
                 pCtx.beginPath();
                 pCtx.moveTo(state.lastX, state.lastY);
                 pCtx.lineTo(x, y);
                 pCtx.stroke();
                 pCtx.restore();
+
+                if (mirror) {
+                    pCtx.save();
+                    pCtx.translate(cx, cy);
+                    pCtx.rotate(i * angleStep);
+                    pCtx.scale(1, -1);
+                    pCtx.translate(-cx, -cy);
+                    pCtx.beginPath();
+                    pCtx.moveTo(state.lastX, state.lastY);
+                    pCtx.lineTo(x, y);
+                    pCtx.stroke();
+                    pCtx.restore();
+                }
             }
 
             [state.lastX, state.lastY] = [x, y];
@@ -759,7 +777,34 @@
         };
 
         inputs.radialLines.addEventListener('input', () => {
+            let val = parseInt(inputs.radialLines.value) || 12;
+            if (paintInputs.mirrorGrid && paintInputs.mirrorGrid.checked && val % 2 !== 0) {
+                val += 1;
+                inputs.radialLines.value = val;
+            }
             paintInputs.symmetryCount.value = inputs.radialLines.value;
+        });
+
+        if (paintInputs.mirrorGrid) {
+            paintInputs.mirrorGrid.addEventListener('change', () => {
+                if (paintInputs.mirrorGrid.checked) {
+                    let sym = parseInt(paintInputs.symmetryCount.value) || 12;
+                    if (sym % 2 !== 0) {
+                        sym += 1;
+                        paintInputs.symmetryCount.value = sym;
+                        inputs.radialLines.value = sym;
+                        generateGrid();
+                    }
+                }
+            });
+        }
+
+        paintInputs.symmetryCount.addEventListener('input', () => {
+            let val = parseInt(paintInputs.symmetryCount.value) || 12;
+            if (paintInputs.mirrorGrid && paintInputs.mirrorGrid.checked && val % 2 !== 0) {
+                val += 1;
+                paintInputs.symmetryCount.value = val;
+            }
         });
 
         // Original logic below updated for multi-layer
@@ -1035,7 +1080,8 @@
                     showCenter: inputs.showCenter.checked, showOuterRing: inputs.showOuterRing.checked,
                     showNumbers: inputs.showNumbers.checked, numberSize: inputs.numberSize.value,
                     showMmScale: inputs.showMmScale.checked, symmetryCount: paintInputs.symmetryCount.value,
-                    brushSize: paintInputs.brushSize.value, paintColor: paintInputs.paintColor.value
+                    brushSize: paintInputs.brushSize.value, paintColor: paintInputs.paintColor.value,
+                    mirrorGrid: paintInputs.mirrorGrid ? paintInputs.mirrorGrid.checked : false
                 },
                 extraRings: JSON.parse(JSON.stringify(state.extraRings)),
                 extraRadials: JSON.parse(JSON.stringify(state.extraRadials))
