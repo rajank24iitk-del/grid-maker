@@ -633,10 +633,11 @@
                 pCtx.strokeStyle = state.activeColor;
             }
 
-
-            const mirror = paintInputs.mirrorGrid && paintInputs.mirrorGrid.checked;
-            const steps = mirror ? sym / 2 : sym;
-            const angleStep = mirror ? (4 * Math.PI) / sym : (2 * Math.PI) / sym;
+            const sym = parseInt(paintInputs.symmetryCount.value) || 12;
+            const isMirror = paintInputs.mirrorGrid && paintInputs.mirrorGrid.checked;
+            const mirror = !state.isEraser && isMirror;
+            const steps = state.isEraser ? 1 : (mirror ? sym / 2 : sym);
+            const angleStep = state.isEraser ? 0 : (mirror ? (4 * Math.PI) / sym : (2 * Math.PI) / sym);
 
             for (let i = 0; i < steps; i++) {
                 pCtx.save();
