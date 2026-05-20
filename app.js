@@ -118,6 +118,8 @@
             showMmScale: true
         };
 
+        const ZOOM_SCALE = 3; // 3x oversampling for crisp zooming on high-res displays
+
         function mmToPixels(mm, dpi) { return (mm / 25.4) * dpi; }
 
         function showToast(message, type = 'success') {
@@ -190,7 +192,11 @@
             // Ensure totalPx is a consistent integer to avoid sub-pixel misalignment
             const totalPx = Math.round(mmToPixels(totalMM, dpiCap));
 
-            canvas.width = canvas.height = totalPx;
+            canvas.width = canvas.height = totalPx * ZOOM_SCALE;
+            canvas.style.width = totalPx + 'px';
+            canvas.style.height = totalPx + 'px';
+
+            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
 
             // Use the actual canvas width for center to match painting logic
             const cx = totalPx / 2, cy = totalPx / 2;
@@ -359,7 +365,9 @@
             // Integer dimensions are critical for matching drawing centers
             const px = Math.round(mmToPixels(totalMM, 96));
 
-            canvas.width = canvas.height = px;
+            canvas.width = canvas.height = px * ZOOM_SCALE;
+            canvas.style.width = px + 'px';
+            canvas.style.height = px + 'px';
             canvas.style.position = 'absolute';
             canvas.style.top = '0';
             canvas.style.left = '0';
@@ -611,7 +619,7 @@
             const cy = canvas.height / 2;
             const sym = parseInt(paintInputs.symmetryCount.value) || 1;
 
-            pCtx.lineWidth = paintInputs.brushSize.value;
+            pCtx.lineWidth = paintInputs.brushSize.value * ZOOM_SCALE;
             pCtx.lineCap = 'round';
             pCtx.lineJoin = 'round';
 
@@ -647,15 +655,18 @@
         // Update the Resize logic for multi-layers
         function resizePaintLayers(totalPx) {
             const targetPx = Math.round(totalPx);
+            const targetInternalPx = targetPx * ZOOM_SCALE;
             state.layers.forEach(l => {
                 const temp = document.createElement('canvas');
                 temp.width = l.canvas.width; temp.height = l.canvas.height;
                 temp.getContext('2d').drawImage(l.canvas, 0, 0);
 
                 const oldW = l.canvas.width; const oldH = l.canvas.height;
-                l.canvas.width = l.canvas.height = targetPx;
+                l.canvas.width = l.canvas.height = targetInternalPx;
+                l.canvas.style.width = targetPx + 'px';
+                l.canvas.style.height = targetPx + 'px';
                 // Center the image using integer math to match rotation centers
-                l.ctx.drawImage(temp, Math.round((targetPx - oldW) / 2), Math.round((targetPx - oldH) / 2));
+                l.ctx.drawImage(temp, Math.round((targetInternalPx - oldW) / 2), Math.round((targetInternalPx - oldH) / 2));
             });
         }
 
@@ -1154,16 +1165,17 @@
             const d = parseFloat(inputs.diameter.value) || 200;
             const numSz = parseFloat(inputs.numberSize.value) || 3;
             const totalPx = Math.round(mmToPixels(d + (Math.max(15, numSz * 5) * 2), 96));
+            const targetInternalPx = totalPx * ZOOM_SCALE;
 
-            if (state.layers.length > 0 && state.layers[0].canvas.width !== totalPx) {
+            if (state.layers.length > 0 && state.layers[0].canvas.width !== targetInternalPx) {
                 resizePaintLayers(totalPx);
                 canvasContainer.style.width = totalPx + 'px';
                 canvasContainer.style.height = totalPx + 'px';
             }
             originalDraw();
             // Sync container display size to grid size
-            canvasContainer.style.width = canvas.width + 'px';
-            canvasContainer.style.height = canvas.height + 'px';
+            canvasContainer.style.width = totalPx + 'px';
+            canvasContainer.style.height = totalPx + 'px';
         };
     }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'grid-maker-v4';
+const CACHE_NAME = 'grid-maker-v5';
 const urlsToCache = [
   './',
   './index.html',
