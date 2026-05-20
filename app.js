@@ -38,7 +38,6 @@
             brushSizeVal: document.getElementById('brushSizeVal'),
             paintColor: document.getElementById('paintColor'),
             symmetryCount: document.getElementById('symmetryCount'),
-            eraserMode: document.getElementById('eraserMode'),
             mirrorGrid: document.getElementById('mirrorGrid'),
             paletteContainer: document.getElementById('paletteContainer'),
             btnClearPaint: document.getElementById('btnClearPaint')
@@ -105,7 +104,8 @@
             // Grid Visibility
             gridVisible: true,
             activeColor: '#7c5cfc',
-            lastBaseColor: '#7c5cfc'
+            lastBaseColor: '#7c5cfc',
+            isEraser: false
         };
 
 
@@ -625,7 +625,7 @@
             pCtx.lineCap = 'round';
             pCtx.lineJoin = 'round';
 
-            if (paintInputs.eraserMode.checked) {
+            if (state.isEraser) {
                 pCtx.globalCompositeOperation = 'destination-out';
                 pCtx.strokeStyle = 'rgba(0,0,0,1)';
             } else {
@@ -762,7 +762,20 @@
 
         // Event Listeners for Painting (Delegate to container)
         canvasContainer.addEventListener('pointerdown', startPaint);
-        window.addEventListener('pointermove', paint);
+        window.addEventListener('pointermove', (e) => {
+            paint(e);
+            const eraserCursor = document.getElementById('eraserCursor');
+            if (state.isEraser && eraserCursor && drawModeOverlay.classList.contains('active')) {
+                eraserCursor.style.display = 'block';
+                const size = paintInputs.brushSize.value * state.zoom;
+                eraserCursor.style.width = size + 'px';
+                eraserCursor.style.height = size + 'px';
+                eraserCursor.style.left = e.clientX + 'px';
+                eraserCursor.style.top = e.clientY + 'px';
+            } else if (eraserCursor) {
+                eraserCursor.style.display = 'none';
+            }
+        });
         window.addEventListener('pointerup', stopPaint);
 
         paintInputs.brushSize.oninput = () => {
@@ -859,21 +872,17 @@
 
         if (btnQuickEraser) {
             btnQuickEraser.onclick = () => {
-                paintInputs.eraserMode.checked = !paintInputs.eraserMode.checked;
-                if (paintInputs.eraserMode.checked) {
+                state.isEraser = !state.isEraser;
+                if (state.isEraser) {
                     btnQuickEraser.classList.add('active-eraser');
                 } else {
                     btnQuickEraser.classList.remove('active-eraser');
+                }
+                const eraserCursor = document.getElementById('eraserCursor');
+                if (eraserCursor && !state.isEraser) {
+                    eraserCursor.style.display = 'none';
                 }
             };
-            
-            paintInputs.eraserMode.addEventListener('change', () => {
-                if (paintInputs.eraserMode.checked) {
-                    btnQuickEraser.classList.add('active-eraser');
-                } else {
-                    btnQuickEraser.classList.remove('active-eraser');
-                }
-            });
         }
 
         shadeLightness.oninput = shadeSaturation.oninput = () => {

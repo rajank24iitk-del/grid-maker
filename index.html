@@ -156,10 +156,6 @@
           </div>
         </div>
 
-        <div class="check-item" style="margin-bottom: 0.8rem;">
-          <input type="checkbox" id="eraserMode">
-          <label for="eraserMode">Eraser Mode</label>
-        </div>
 
         <div class="check-item" style="margin-bottom: 0.8rem;">
           <input type="checkbox" id="mirrorGrid">
@@ -339,6 +335,7 @@
 
     <div class="draw-canvas-container" id="drawCanvasContainer">
       <!-- The canvas will be moved here in Draw Mode -->
+      <div id="eraserCursor" style="display:none; position:fixed; border:1.5px solid #333; border-radius:50%; pointer-events:none; z-index:10000; background:rgba(255,255,255,0.3); transform: translate(-50%, -50%); box-shadow: 0 0 4px rgba(255,255,255,0.8);"></div>
     </div>
   </div>
 
