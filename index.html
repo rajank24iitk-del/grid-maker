@@ -129,7 +129,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="brushSize">Brush Size</label>
-            <input type="range" id="brushSize" value="3" min="1" max="50" step="1" style="padding: 0;">
+            <input type="range" id="brushSize" value="3" min="1" max="200" step="1" style="padding: 0;">
           </div>
           <div class="form-group" style="flex: 0 0 50px;">
             <label>&nbsp;</label>
@@ -286,12 +286,15 @@
         </button>
       </div>
 
-      <div class="draw-bar-center">
-        <div class="draw-brush-control" style="display: flex; align-items: center; gap: 10px;">
-          <button class="draw-tool-btn" id="btnBrushDec" title="Decrease Brush Size" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; padding: 0;">-</button>
-          <input type="range" id="drawBrushSize" value="3" min="1" max="50" step="1" title="Brush Size">
-          <button class="draw-tool-btn" id="btnBrushInc" title="Increase Brush Size" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; padding: 0;">+</button>
-          <span id="drawBrushSizeVal" style="font-size: 0.7rem; min-width: 25px; text-align: right;">3px</span>
+        <div class="draw-bar-center">
+        <div class="draw-brush-control">
+          <span class="brush-label">Size</span>
+          <div class="size-stepper">
+            <button class="size-stepper-btn" id="btnBrushDec" title="Decrease Size (−1)">−</button>
+            <span id="drawBrushSizeVal" class="size-stepper-val">3px</span>
+            <button class="size-stepper-btn" id="btnBrushInc" title="Increase Size (+1)">+</button>
+          </div>
+          <input type="range" id="drawBrushSize" value="3" min="1" max="200" step="1" title="Brush Size" class="draw-size-slider">
         </div>
 
         <button class="draw-tool-btn" id="btnQuickEraser" title="Toggle Eraser" style="border-radius: 50%; font-size: 1.2rem; margin-left: 10px;">
@@ -340,7 +343,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

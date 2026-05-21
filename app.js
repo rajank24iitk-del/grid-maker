@@ -105,7 +105,9 @@
             gridVisible: true,
             activeColor: '#7c5cfc',
             lastBaseColor: '#7c5cfc',
-            isEraser: false
+            isEraser: false,
+            // Dynamic oversampling scale (updated each draw call)
+            zoomScale: 4
         };
 
 
@@ -120,7 +122,12 @@
             showMmScale: true
         };
 
-        const ZOOM_SCALE = 4; // 4x oversampling for crisp zooming on high-res displays
+        // Dynamic oversampling: up to 4x for small canvases, auto-reduced for large ones
+        // so the internal canvas never exceeds MAX_INTERNAL_PX (browser memory safe limit)
+        const MAX_INTERNAL_PX = 8000;
+        function getZoomScale(totalPx) {
+            return Math.max(1, Math.min(4, Math.floor(MAX_INTERNAL_PX / totalPx)));
+        }
 
         function mmToPixels(mm, dpi) { return (mm / 25.4) * dpi; }
 
@@ -194,11 +201,15 @@
             // Ensure totalPx is a consistent integer to avoid sub-pixel misalignment
             const totalPx = Math.round(mmToPixels(totalMM, dpiCap));
 
-            canvas.width = canvas.height = totalPx * ZOOM_SCALE;
+            // Compute and cache dynamic zoom scale for this canvas size
+            const zoomScale = getZoomScale(totalPx);
+            state.zoomScale = zoomScale;
+
+            canvas.width = canvas.height = totalPx * zoomScale;
             canvas.style.width = '100%';
             canvas.style.height = '100%';
 
-            ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+            ctx.scale(zoomScale, zoomScale);
 
             // Use the actual canvas width for center to match painting logic
             const cx = totalPx / 2, cy = totalPx / 2;
@@ -366,8 +377,10 @@
             const totalMM = d + (Math.max(15, numSz * 5) * 2);
             // Integer dimensions are critical for matching drawing centers
             const px = Math.round(mmToPixels(totalMM, 96));
+            // Use current dynamic zoom scale (or 4 as safe default before first draw)
+            const layerZoom = state.zoomScale || getZoomScale(px);
 
-            canvas.width = canvas.height = px * ZOOM_SCALE;
+            canvas.width = canvas.height = px * layerZoom;
             canvas.style.width = '100%';
             canvas.style.height = '100%';
             canvas.style.position = 'absolute';
@@ -620,7 +633,7 @@
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
 
-            pCtx.lineWidth = paintInputs.brushSize.value * ZOOM_SCALE;
+            pCtx.lineWidth = paintInputs.brushSize.value * state.zoomScale;
             pCtx.lineCap = 'round';
             pCtx.lineJoin = 'round';
 
@@ -674,7 +687,7 @@
         // Update the Resize logic for multi-layers
         function resizePaintLayers(totalPx) {
             const targetPx = Math.round(totalPx);
-            const targetInternalPx = targetPx * ZOOM_SCALE;
+            const targetInternalPx = targetPx * state.zoomScale;
             state.layers.forEach(l => {
                 const temp = document.createElement('canvas');
                 temp.width = l.canvas.width; temp.height = l.canvas.height;
@@ -868,7 +881,7 @@
                 drawBrushSize.oninput();
             };
             btnBrushInc.onclick = () => {
-                drawBrushSize.value = Math.min(parseInt(drawBrushSize.max) || 50, parseInt(drawBrushSize.value) + 1);
+                drawBrushSize.value = Math.min(parseInt(drawBrushSize.max) || 200, parseInt(drawBrushSize.value) + 1);
                 drawBrushSize.oninput();
             };
         }
@@ -1270,7 +1283,9 @@
             const d = parseFloat(inputs.diameter.value) || 200;
             const numSz = parseFloat(inputs.numberSize.value) || 3;
             const totalPx = Math.round(mmToPixels(d + (Math.max(15, numSz * 5) * 2), 96));
-            const targetInternalPx = totalPx * ZOOM_SCALE;
+            // Pre-compute zoom scale so resizePaintLayers uses the correct value
+            state.zoomScale = getZoomScale(totalPx);
+            const targetInternalPx = totalPx * state.zoomScale;
 
             if (state.layers.length > 0 && state.layers[0].canvas.width !== targetInternalPx) {
                 resizePaintLayers(totalPx);
