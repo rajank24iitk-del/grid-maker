@@ -619,7 +619,6 @@
             const canvas = activeLayer.canvas;
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
-            const sym = parseInt(paintInputs.symmetryCount.value) || 1;
 
             pCtx.lineWidth = paintInputs.brushSize.value * ZOOM_SCALE;
             pCtx.lineCap = 'round';
@@ -768,7 +767,7 @@
             const eraserCursor = document.getElementById('eraserCursor');
             if (state.isEraser && eraserCursor && drawModeOverlay.classList.contains('active')) {
                 eraserCursor.style.display = 'block';
-                const size = paintInputs.brushSize.value * state.zoom;
+                const size = Math.max(10, paintInputs.brushSize.value);
                 eraserCursor.style.width = size + 'px';
                 eraserCursor.style.height = size + 'px';
                 eraserCursor.style.left = e.clientX + 'px';
