@@ -286,6 +286,7 @@
         </button>
       </div>
 
+
         <div class="draw-bar-center">
         <div class="draw-brush-control">
           <span class="brush-label">Size</span>
@@ -299,6 +300,11 @@
 
         <button class="draw-tool-btn" id="btnQuickEraser" title="Toggle Eraser" style="border-radius: 50%; font-size: 1.2rem; margin-left: 10px;">
           ✎
+        </button>
+
+        <!-- Erase Mode: Local or Symmetric -->
+        <button class="draw-tool-btn erase-sym-btn" id="btnSymErase" title="Toggle Symmetric Erase — when ON, eraser follows all symmetry lines">
+          ⊗ Sym
         </button>
 
         <div class="draw-color-selector">
@@ -325,6 +331,22 @@
             <span class="icon">↪</span>
           </button>
         </div>
+
+        <!-- Symmetry count (mirror grid) — synced with main panel -->
+        <div class="draw-sym-control">
+          <span style="font-size: 0.75rem; color: var(--text-muted);" title="Symmetry segments">⊙</span>
+          <button class="size-stepper-btn" id="btnDrawSymMinus" title="Fewer symmetry lines">−</button>
+          <input type="number" id="drawSymCount" value="12" min="1" max="360" title="Symmetry count" class="sym-count-input">
+          <button class="size-stepper-btn" id="btnDrawSymPlus" title="More symmetry lines">+</button>
+        </div>
+
+        <!-- Mirror Grid toggle (same as in main panel) -->
+        <div class="hand-draw-toggle" style="margin-left:4px;">
+          <input type="checkbox" id="drawMirrorGrid">
+          <label for="drawMirrorGrid" title="Mirror drawing across axis">
+            <span class="icon">↔</span> Mirror
+          </label>
+        </div>
       </div>
 
       <div class="draw-bar-right">
@@ -337,13 +359,14 @@
       </div>
     </div>
 
+
     <div class="draw-canvas-container" id="drawCanvasContainer">
       <!-- The canvas will be moved here in Draw Mode -->
       <div id="eraserCursor" style="display:none; position:fixed; border:1.5px solid #333; border-radius:50%; pointer-events:none; z-index:10000; background:rgba(255,255,255,0.3); transform: translate(-50%, -50%); box-shadow: 0 0 4px rgba(255,255,255,0.8);"></div>
     </div>
   </div>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=8"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

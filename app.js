@@ -94,13 +94,19 @@
             undoStack: [],
             redoStack: [],
             maxStack: 20,
-            // Zoom/Pan State
+            // Zoom/Pan/Rotate State
             zoom: 1,
             panX: 0,
             panY: 0,
+            rotation: 0,
             lastTouchDist: 0,
+            lastAngle: 0,
             lastTouchX: 0,
             lastTouchY: 0,
+            naturalLeft: 0,
+            naturalTop: 0,
+            // Erase Mode: false = local (touch-point only), true = symmetric (all axes)
+            symEraseMode: false,
             // Grid Visibility
             gridVisible: true,
             activeColor: '#7c5cfc',
@@ -551,19 +557,6 @@
 
         // Painting Logic
         function getCoords(e) {
-            // Use canvasContainer (the transformed element) for the reference rect.
-            // With transform-origin:0 0, translate(panX,panY) scale(zoom):
-            //   rect.left = naturalLeft + panX
-            //   rect.width = canvasPixelWidth * zoom
-            // So: canvasX = (clientX - rect.left) / zoom = (clientX - rect.left) * (canvasW / rect.width)
-            const rect = canvasContainer.getBoundingClientRect();
-            const gridCanvas = document.getElementById('mandalaCanvas');
-            const canvasW = gridCanvas.width;
-            const canvasH = gridCanvas.height;
-
-            const scaleX = canvasW / rect.width;
-            const scaleY = canvasH / rect.height;
-
             let clientX, clientY;
             if (e.touches && e.touches.length > 0) {
                 clientX = e.touches[0].clientX;
@@ -573,9 +566,26 @@
                 clientY = e.clientY;
             }
 
+            const gridCanvas = document.getElementById('mandalaCanvas');
+            const W = gridCanvas.width;
+            const H = gridCanvas.height;
+
+            // In draw mode: use stored natural origin + full inverse transform (pan + rotate + scale)
+            if (drawModeOverlay.classList.contains('active')) {
+                const a = state.rotation;
+                const ox = clientX - state.naturalLeft - state.panX;
+                const oy = clientY - state.naturalTop - state.panY;
+                return [
+                    (ox * Math.cos(a) + oy * Math.sin(a)) / state.zoom,
+                    (-ox * Math.sin(a) + oy * Math.cos(a)) / state.zoom
+                ];
+            }
+
+            // Normal mode (no rotation): fast bounding-rect approach
+            const rect = canvasContainer.getBoundingClientRect();
             return [
-                (clientX - rect.left) * scaleX,
-                (clientY - rect.top) * scaleY
+                (clientX - rect.left) * (W / rect.width),
+                (clientY - rect.top) * (H / rect.height)
             ];
         }
 
@@ -647,9 +657,11 @@
 
             const sym = parseInt(paintInputs.symmetryCount.value) || 12;
             const isMirror = paintInputs.mirrorGrid && paintInputs.mirrorGrid.checked;
+            // Sym erase: erase at all symmetry positions. Local erase: only at touch point.
+            const symErase = state.isEraser && state.symEraseMode;
             const mirror = !state.isEraser && isMirror;
-            const steps = state.isEraser ? 1 : (mirror ? sym / 2 : sym);
-            const angleStep = state.isEraser ? 0 : (mirror ? (4 * Math.PI) / sym : (2 * Math.PI) / sym);
+            const steps = state.isEraser ? (symErase ? sym : 1) : (mirror ? sym / 2 : sym);
+            const angleStep = state.isEraser ? (symErase ? (2 * Math.PI) / sym : 0) : (mirror ? (4 * Math.PI) / sym : (2 * Math.PI) / sym);
 
             for (let i = 0; i < steps; i++) {
                 pCtx.save();
@@ -720,13 +732,19 @@
                     el.className = 'palette-color';
                     el.style.backgroundColor = color;
                     el.onclick = () => {
+                        if (isFlyout) {
+                            state.lastBaseColor = color;
+                            // Sync shade sliders to the actual HSL of the selected color
+                            // so clicking a swatch always gives the exact color shown.
+                            const hsl = hexToHSL(color);
+                            shadeLightness.value = hsl.l;
+                            shadeSaturation.value = hsl.s;
+                        }
                         const finalColor = isFlyout ? applyShades(color) : color;
-                        if (isFlyout) state.lastBaseColor = color;
                         updateAppColor(finalColor);
                         if (isFlyout) {
                             colorPickerFlyout.classList.remove('active');
                         }
-
                     };
 
                     return el;
@@ -769,6 +787,26 @@
             else if (max === g) h = (b - r) / (max - min) + 2;
             else h = (r - g) / (max - min) + 4;
             return Math.round(h * 60);
+        }
+
+        // Returns { h, s, l } in degrees / percent — used to sync shade sliders on palette click
+        function hexToHSL(hex) {
+            let r = parseInt(hex.slice(1, 3), 16) / 255;
+            let g = parseInt(hex.slice(3, 5), 16) / 255;
+            let b = parseInt(hex.slice(5, 7), 16) / 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) {
+                h = 0; s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+                else if (max === g) h = (b - r) / d + 2;
+                else h = (r - g) / d + 4;
+                h *= 60;
+            }
+            return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
         }
 
         initPalette();
@@ -845,6 +883,17 @@
             drawModeOverlay.classList.add('active');
             drawCanvasContainer.appendChild(canvasContainer);
             colorDot.style.backgroundColor = paintInputs.paintColor.value;
+            // Sync draw-mode controls with main panel
+            const drawSymEl = document.getElementById('drawSymCount');
+            if (drawSymEl) drawSymEl.value = paintInputs.symmetryCount.value;
+            const drawMirrorEl = document.getElementById('drawMirrorGrid');
+            if (drawMirrorEl && paintInputs.mirrorGrid) drawMirrorEl.checked = paintInputs.mirrorGrid.checked;
+            // Store canvas natural origin (transform is identity here)
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                const rect = canvasContainer.getBoundingClientRect();
+                state.naturalLeft = rect.left;
+                state.naturalTop = rect.top;
+            }));
         };
 
         btnEnterDrawMode.onclick = enterDraw;
@@ -911,6 +960,57 @@
             };
         }
 
+        // Symmetric Erase toggle
+        const btnSymErase = document.getElementById('btnSymErase');
+        if (btnSymErase) {
+            btnSymErase.onclick = () => {
+                state.symEraseMode = !state.symEraseMode;
+                btnSymErase.classList.toggle('active-sym-erase', state.symEraseMode);
+                btnSymErase.title = state.symEraseMode
+                    ? 'Sym Erase ON — eraser follows all symmetry lines'
+                    : 'Sym Erase OFF — eraser only erases at touch point';
+            };
+        }
+
+        // Symmetry count in draw bar — bidirectional sync with main panel
+        const drawSymCountEl = document.getElementById('drawSymCount');
+        const btnDrawSymMinus = document.getElementById('btnDrawSymMinus');
+        const btnDrawSymPlus = document.getElementById('btnDrawSymPlus');
+        if (drawSymCountEl) {
+            drawSymCountEl.oninput = () => {
+                let v = Math.max(1, Math.min(360, parseInt(drawSymCountEl.value) || 12));
+                drawSymCountEl.value = v;
+                paintInputs.symmetryCount.value = v;
+                inputs.radialLines.value = v;
+            };
+        }
+        if (btnDrawSymMinus) {
+            btnDrawSymMinus.onclick = () => {
+                let v = Math.max(1, (parseInt(drawSymCountEl.value) || 12) - 1);
+                drawSymCountEl.value = v;
+                paintInputs.symmetryCount.value = v;
+                inputs.radialLines.value = v;
+            };
+        }
+        if (btnDrawSymPlus) {
+            btnDrawSymPlus.onclick = () => {
+                let v = Math.min(360, (parseInt(drawSymCountEl.value) || 12) + 1);
+                drawSymCountEl.value = v;
+                paintInputs.symmetryCount.value = v;
+                inputs.radialLines.value = v;
+            };
+        }
+
+        // Mirror toggle in draw bar — synced with main panel
+        const drawMirrorEl = document.getElementById('drawMirrorGrid');
+        if (drawMirrorEl && paintInputs.mirrorGrid) {
+            drawMirrorEl.onchange = () => {
+                paintInputs.mirrorGrid.checked = drawMirrorEl.checked;
+                paintInputs.mirrorGrid.dispatchEvent(new Event('change'));
+            };
+        }
+
+
         shadeLightness.oninput = shadeSaturation.oninput = () => {
             if (state.lastBaseColor) {
                 updateAppColor(applyShades(state.lastBaseColor));
@@ -924,7 +1024,9 @@
             if (!transformRAF) {
                 transformRAF = requestAnimationFrame(() => {
                     canvasContainer.style.transformOrigin = '0 0';
-                    canvasContainer.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale3d(${state.zoom}, ${state.zoom}, 1)`;
+                    const rotDeg = ((state.rotation || 0) * 180 / Math.PI).toFixed(4);
+                    canvasContainer.style.transform =
+                        `translate3d(${state.panX}px,${state.panY}px,0) rotate(${rotDeg}deg) scale3d(${state.zoom},${state.zoom},1)`;
                     transformRAF = null;
                 });
             }
@@ -934,30 +1036,23 @@
             state.zoom = 1;
             state.panX = 0;
             state.panY = 0;
-            state.layoutLeft = undefined;
-            state.layoutTop = undefined;
+            state.rotation = 0;
+            state.lastAngle = 0;
             requestUpdateTransform();
         }
 
         canvasContainer.addEventListener('touchstart', (e) => {
-            // Only care about this in Draw Mode (overlay active)
             if (!drawModeOverlay.classList.contains('active')) return;
 
             if (e.touches.length === 2) {
-                // Pinch start
-                state.isDrawing = false; // Stop any drawing
+                state.isDrawing = false;
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 state.lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+                state.lastAngle = Math.atan2(dy, dx);
                 state.lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 state.lastTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-
-                // Cache the true layout position to prevent layout thrashing
-                const rect = canvasContainer.getBoundingClientRect();
-                state.layoutLeft = rect.left - state.panX;
-                state.layoutTop = rect.top - state.panY;
             } else if (e.touches.length === 1) {
-                // Single finger pans the canvas when Hand Drawing is OFF (default)
                 if (!drawWithHand.checked && e.touches[0].touchType !== 'stylus') {
                     state.isDrawing = false;
                     state.lastTouchX = e.touches[0].clientX;
@@ -971,46 +1066,46 @@
 
             if (e.touches.length === 2) {
                 e.preventDefault();
-                const dx = e.touches[0].clientX - e.touches[1].clientX;
-                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const t0 = e.touches[0], t1 = e.touches[1];
+                const midX = (t0.clientX + t1.clientX) / 2;
+                const midY = (t0.clientY + t1.clientY) / 2;
+                const dx = t1.clientX - t0.clientX;
+                const dy = t1.clientY - t0.clientY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const angle = Math.atan2(dy, dx);
 
-                const zoomFactor = dist / state.lastTouchDist;
-                const newZoom = Math.min(Math.max(0.5, state.zoom * zoomFactor), 8);
+                const newZoom = Math.min(Math.max(0.3, state.zoom * dist / state.lastTouchDist), 10);
+                const dAngle = angle - state.lastAngle;
+                const newAngle = state.rotation + dAngle;
 
-                // Compute rect mathematically without reading DOM (no thrashing)
-                if (state.layoutLeft === undefined) {
-                    const rect = canvasContainer.getBoundingClientRect();
-                    state.layoutLeft = rect.left - state.panX;
-                    state.layoutTop = rect.top - state.panY;
-                }
-                const rectLeft = state.layoutLeft + state.panX;
-                const rectTop = state.layoutTop + state.panY;
+                // Inverse-transform: find canvas-space point under the previous midpoint
+                const nl = state.naturalLeft;
+                const nt = state.naturalTop;
+                const curA = state.rotation;
+                const ox = state.lastTouchX - nl - state.panX;
+                const oy = state.lastTouchY - nt - state.panY;
+                const focalX = (ox * Math.cos(curA) + oy * Math.sin(curA)) / state.zoom;
+                const focalY = (-ox * Math.sin(curA) + oy * Math.cos(curA)) / state.zoom;
 
-                const scaleFactor = newZoom / state.zoom;
-                state.panX += (midX - rectLeft) * (1 - scaleFactor);
-                state.panY += (midY - rectTop) * (1 - scaleFactor);
-
-                // Also pan by finger midpoint movement
-                state.panX += (midX - state.lastTouchX);
-                state.panY += (midY - state.lastTouchY);
+                // New pan: keep that canvas point under new midpoint with new zoom+rotation
+                const cosN = Math.cos(newAngle), sinN = Math.sin(newAngle);
+                state.panX = midX - nl - (focalX * cosN - focalY * sinN) * newZoom;
+                state.panY = midY - nt - (focalX * sinN + focalY * cosN) * newZoom;
 
                 state.zoom = newZoom;
+                state.rotation = newAngle;
                 state.lastTouchDist = dist;
+                state.lastAngle = angle;
                 state.lastTouchX = midX;
                 state.lastTouchY = midY;
-                
                 requestUpdateTransform();
+
             } else if (e.touches.length === 1 && !drawWithHand.checked && e.touches[0].touchType !== 'stylus') {
-                // Pan with one finger in Pencil Only mode
                 e.preventDefault();
-                state.panX += (e.touches[0].clientX - state.lastTouchX);
-                state.panY += (e.touches[0].clientY - state.lastTouchY);
+                state.panX += e.touches[0].clientX - state.lastTouchX;
+                state.panY += e.touches[0].clientY - state.lastTouchY;
                 state.lastTouchX = e.touches[0].clientX;
                 state.lastTouchY = e.touches[0].clientY;
-                
                 requestUpdateTransform();
             }
         }, { passive: false });
