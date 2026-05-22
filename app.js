@@ -104,10 +104,6 @@
             lastAngle: 0,
             lastTouchX: 0,
             lastTouchY: 0,
-            naturalLeft: 0,
-            naturalTop: 0,
-            naturalWidth: 1,
-            naturalHeight: 1,
             // Erase Mode: false = local (touch-point only), true = symmetric (all axes)
             symEraseMode: false,
             // Grid Visibility
@@ -560,6 +556,17 @@
         });
 
         // Painting Logic
+        function getNaturalRect() {
+            const drawCanvasContainer = document.getElementById('drawCanvasContainer');
+            const parentRect = drawCanvasContainer.getBoundingClientRect();
+            return {
+                left: parentRect.left + canvasContainer.offsetLeft,
+                top: parentRect.top + canvasContainer.offsetTop,
+                width: canvasContainer.offsetWidth,
+                height: canvasContainer.offsetHeight
+            };
+        }
+
         function getCoords(e) {
             let clientX, clientY;
             if (e.touches && e.touches.length > 0) {
@@ -577,13 +584,14 @@
             // In draw mode: use stored natural origin + full inverse transform (pan + rotate + scale)
             if (drawModeOverlay.classList.contains('active')) {
                 const a = state.rotation;
-                const ox = clientX - state.naturalLeft - state.panX;
-                const oy = clientY - state.naturalTop - state.panY;
+                const nat = getNaturalRect();
+                const ox = clientX - nat.left - state.panX;
+                const oy = clientY - nat.top - state.panY;
                 const cssX = (ox * Math.cos(a) + oy * Math.sin(a)) / state.zoom;
                 const cssY = (-ox * Math.sin(a) + oy * Math.cos(a)) / state.zoom;
                 return [
-                    cssX * (W / state.naturalWidth),
-                    cssY * (H / state.naturalHeight)
+                    cssX * (W / nat.width),
+                    cssY * (H / nat.height)
                 ];
             }
 
@@ -978,14 +986,7 @@
             if (drawSymEl) drawSymEl.value = paintInputs.symmetryCount.value;
             const drawMirrorEl = document.getElementById('drawMirrorGrid');
             if (drawMirrorEl && paintInputs.mirrorGrid) drawMirrorEl.checked = paintInputs.mirrorGrid.checked;
-            // Store canvas natural origin (transform is identity here)
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                const rect = canvasContainer.getBoundingClientRect();
-                state.naturalLeft = rect.left;
-                state.naturalTop = rect.top;
-                state.naturalWidth = rect.width;
-                state.naturalHeight = rect.height;
-            }));
+            // Natural coords are now calculated dynamically via getNaturalRect
         };
 
         btnEnterDrawMode.onclick = enterDraw;
@@ -1188,8 +1189,9 @@
                 const newAngle = state.rotation + dAngle;
 
                 // Inverse-transform: find canvas-space point under the previous midpoint
-                const nl = state.naturalLeft;
-                const nt = state.naturalTop;
+                const nat = getNaturalRect();
+                const nl = nat.left;
+                const nt = nat.top;
                 const curA = state.rotation;
                 const ox = state.lastTouchX - nl - state.panX;
                 const oy = state.lastTouchY - nt - state.panY;
