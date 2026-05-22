@@ -78,6 +78,7 @@
         const shadeSaturation = document.getElementById('shadeSaturation');
         const paletteFlyoutGrid = document.getElementById('paletteFlyoutGrid');
         const btnQuickEraser = document.getElementById('btnQuickEraser');
+        const btnFillTool = document.getElementById('btnFillTool');
 
         let state = {
             baseRings: [],
@@ -105,6 +106,8 @@
             lastTouchY: 0,
             naturalLeft: 0,
             naturalTop: 0,
+            naturalWidth: 1,
+            naturalHeight: 1,
             // Erase Mode: false = local (touch-point only), true = symmetric (all axes)
             symEraseMode: false,
             // Grid Visibility
@@ -112,6 +115,7 @@
             activeColor: '#7c5cfc',
             lastBaseColor: '#7c5cfc',
             isEraser: false,
+            isFilling: false,
             // Dynamic oversampling scale (updated each draw call)
             zoomScale: 4
         };
@@ -575,9 +579,11 @@
                 const a = state.rotation;
                 const ox = clientX - state.naturalLeft - state.panX;
                 const oy = clientY - state.naturalTop - state.panY;
+                const cssX = (ox * Math.cos(a) + oy * Math.sin(a)) / state.zoom;
+                const cssY = (-ox * Math.sin(a) + oy * Math.cos(a)) / state.zoom;
                 return [
-                    (ox * Math.cos(a) + oy * Math.sin(a)) / state.zoom,
-                    (-ox * Math.sin(a) + oy * Math.cos(a)) / state.zoom
+                    cssX * (W / state.naturalWidth),
+                    cssY * (H / state.naturalHeight)
                 ];
             }
 
@@ -615,8 +621,16 @@
                 if (e.buttons !== 1 && e.pressure === 0) return;
             }
 
-            state.isDrawing = true;
             [state.lastX, state.lastY] = getCoords(e);
+            
+            if (state.isFilling) {
+                executeSymmetricFill(state.lastX, state.lastY);
+                saveState();
+                state.isDrawing = false;
+                return;
+            }
+            
+            state.isDrawing = true;
         }
 
         function paint(e) {
@@ -694,6 +708,82 @@
         function stopPaint() {
             if (state.isDrawing) saveState();
             state.isDrawing = false;
+        }
+
+        function hexToRgba(hex) {
+            let r = parseInt(hex.slice(1, 3), 16) || 0;
+            let g = parseInt(hex.slice(3, 5), 16) || 0;
+            let b = parseInt(hex.slice(5, 7), 16) || 0;
+            return [r, g, b, 255];
+        }
+
+        function executeSymmetricFill(startX, startY) {
+            const activeLayer = state.layers[state.activeLayerIdx];
+            if (!activeLayer || !activeLayer.visible) return;
+            const canvas = activeLayer.canvas;
+            const pCtx = activeLayer.ctx;
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            const imgData = pCtx.getImageData(0, 0, w, h);
+            const data = new Uint32Array(imgData.data.buffer);
+            const fillColor = state.isEraser ? [0,0,0,0] : hexToRgba(state.activeColor);
+            
+            const tempBuffer = new Uint8ClampedArray(4);
+            tempBuffer[0] = fillColor[0];
+            tempBuffer[1] = fillColor[1];
+            tempBuffer[2] = fillColor[2];
+            tempBuffer[3] = state.isEraser ? 0 : 255;
+            const fill32 = new Uint32Array(tempBuffer.buffer)[0];
+
+            const sym = parseInt(paintInputs.symmetryCount.value) || 12;
+            const isMirror = paintInputs.mirrorGrid && paintInputs.mirrorGrid.checked;
+            const mirror = !state.isEraser && isMirror;
+            const steps = mirror ? sym / 2 : sym;
+            const angleStep = mirror ? (4 * Math.PI) / sym : (2 * Math.PI) / sym;
+
+            const queue = new Int32Array(w * h);
+
+            for (let i = 0; i < steps; i++) {
+                const angle = i * angleStep;
+                
+                const nx1 = cx + (startX - cx) * Math.cos(angle) - (startY - cy) * Math.sin(angle);
+                const ny1 = cy + (startX - cx) * Math.sin(angle) + (startY - cy) * Math.cos(angle);
+                doFloodFill(Math.floor(nx1), Math.floor(ny1));
+
+                if (mirror) {
+                    const flippedY = cy - (startY - cy);
+                    const nx2 = cx + (startX - cx) * Math.cos(angle) - (flippedY - cy) * Math.sin(angle);
+                    const ny2 = cy + (startX - cx) * Math.sin(angle) + (flippedY - cy) * Math.cos(angle);
+                    doFloodFill(Math.floor(nx2), Math.floor(ny2));
+                }
+            }
+
+            pCtx.putImageData(imgData, 0, 0);
+
+            function doFloodFill(x, y) {
+                if (x < 0 || y < 0 || x >= w || y >= h) return;
+                const startIdx = y * w + x;
+                const targetColor = data[startIdx];
+                if (targetColor === fill32) return;
+
+                queue[0] = startIdx;
+                data[startIdx] = fill32;
+
+                let head = 0, tail = 1;
+                while (head < tail) {
+                    const idx = queue[head++];
+                    const px = idx % w;
+                    const py = Math.floor(idx / w);
+
+                    if (px > 0 && data[idx - 1] === targetColor) { data[idx - 1] = fill32; queue[tail++] = idx - 1; }
+                    if (px < w - 1 && data[idx + 1] === targetColor) { data[idx + 1] = fill32; queue[tail++] = idx + 1; }
+                    if (py > 0 && data[idx - w] === targetColor) { data[idx - w] = fill32; queue[tail++] = idx - w; }
+                    if (py < h - 1 && data[idx + w] === targetColor) { data[idx + w] = fill32; queue[tail++] = idx + w; }
+                }
+            }
         }
 
         // Update the Resize logic for multi-layers
@@ -893,6 +983,8 @@
                 const rect = canvasContainer.getBoundingClientRect();
                 state.naturalLeft = rect.left;
                 state.naturalTop = rect.top;
+                state.naturalWidth = rect.width;
+                state.naturalHeight = rect.height;
             }));
         };
 
@@ -950,6 +1042,8 @@
                 state.isEraser = !state.isEraser;
                 if (state.isEraser) {
                     btnQuickEraser.classList.add('active-eraser');
+                    state.isFilling = false;
+                    if (btnFillTool) btnFillTool.classList.remove('active-eraser');
                 } else {
                     btnQuickEraser.classList.remove('active-eraser');
                 }
@@ -957,6 +1051,21 @@
                 if (eraserCursor && !state.isEraser) {
                     eraserCursor.style.display = 'none';
                 }
+            };
+        }
+
+        if (btnFillTool) {
+            btnFillTool.onclick = () => {
+                state.isFilling = !state.isFilling;
+                if (state.isFilling) {
+                    btnFillTool.classList.add('active-eraser');
+                    state.isEraser = false;
+                    if (btnQuickEraser) btnQuickEraser.classList.remove('active-eraser');
+                } else {
+                    btnFillTool.classList.remove('active-eraser');
+                }
+                const eraserCursor = document.getElementById('eraserCursor');
+                if (eraserCursor) eraserCursor.style.display = 'none';
             };
         }
 
