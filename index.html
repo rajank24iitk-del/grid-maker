@@ -334,13 +334,6 @@
           </button>
         </div>
 
-        <!-- Symmetry count (mirror grid) — synced with main panel -->
-        <div class="draw-sym-control">
-          <span style="font-size: 0.75rem; color: var(--text-muted);" title="Symmetry segments">⊙</span>
-          <button class="size-stepper-btn" id="btnDrawSymMinus" title="Fewer symmetry lines">−</button>
-          <input type="number" id="drawSymCount" value="12" min="1" max="360" title="Symmetry count" class="sym-count-input">
-          <button class="size-stepper-btn" id="btnDrawSymPlus" title="More symmetry lines">+</button>
-        </div>
 
         <!-- Mirror Grid toggle (same as in main panel) -->
         <div class="hand-draw-toggle" style="margin-left:4px;">
@@ -368,6 +361,9 @@
     </div>
   </div>
 
+  <!-- Add the color drop indicator at the bottom of the body -->
+  <div id="colorDropIndicator" class="color-drop-indicator"></div>
+
   <script src="app.js?v=8"></script>
   <script>
     if ('serviceWorker' in navigator) {
@@ -380,7 +376,5 @@
       });
     }
   </script>
-  <!-- Add the color drop indicator at the bottom of the body -->
-  <div id="colorDropIndicator" class="color-drop-indicator"></div>
 </body>
 </html>

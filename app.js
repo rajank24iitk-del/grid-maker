@@ -211,7 +211,7 @@
 
             canvas.width = canvas.height = totalPx * zoomScale;
             canvas.style.width = '100%';
-            canvas.style.height = '100%';
+            canvas.style.height = 'auto';
 
             ctx.scale(zoomScale, zoomScale);
 
@@ -386,7 +386,7 @@
 
             canvas.width = canvas.height = px * layerZoom;
             canvas.style.width = '100%';
-            canvas.style.height = '100%';
+            canvas.style.height = '100%'; // Layers stay 100% of parent
             canvas.style.position = 'absolute';
             canvas.style.top = '0';
             canvas.style.left = '0';
@@ -1092,35 +1092,6 @@
                 btnSymErase.title = state.symEraseMode
                     ? 'Sym Erase ON — eraser follows all symmetry lines'
                     : 'Sym Erase OFF — eraser only erases at touch point';
-            };
-        }
-
-        // Symmetry count in draw bar — bidirectional sync with main panel
-        const drawSymCountEl = document.getElementById('drawSymCount');
-        const btnDrawSymMinus = document.getElementById('btnDrawSymMinus');
-        const btnDrawSymPlus = document.getElementById('btnDrawSymPlus');
-        if (drawSymCountEl) {
-            drawSymCountEl.oninput = () => {
-                let v = Math.max(1, Math.min(360, parseInt(drawSymCountEl.value) || 12));
-                drawSymCountEl.value = v;
-                paintInputs.symmetryCount.value = v;
-                inputs.radialLines.value = v;
-            };
-        }
-        if (btnDrawSymMinus) {
-            btnDrawSymMinus.onclick = () => {
-                let v = Math.max(1, (parseInt(drawSymCountEl.value) || 12) - 1);
-                drawSymCountEl.value = v;
-                paintInputs.symmetryCount.value = v;
-                inputs.radialLines.value = v;
-            };
-        }
-        if (btnDrawSymPlus) {
-            btnDrawSymPlus.onclick = () => {
-                let v = Math.min(360, (parseInt(drawSymCountEl.value) || 12) + 1);
-                drawSymCountEl.value = v;
-                paintInputs.symmetryCount.value = v;
-                inputs.radialLines.value = v;
             };
         }
 
