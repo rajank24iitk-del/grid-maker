@@ -963,6 +963,20 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   transition: transform 0.2s;
+  touch-action: none;
+}
+
+.color-drop-indicator {
+  position: fixed;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  display: none;
 }
 
 .color-dot:hover {

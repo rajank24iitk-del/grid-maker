@@ -314,11 +314,9 @@
         <div class="draw-color-selector">
           <div class="color-dot" id="colorDot" style="background-color: #7c5cfc;"></div>
           <div class="color-picker-flyout" id="colorPickerFlyout">
-            <div class="shade-adjuster">
-              <label style="font-size: 0.65rem; color: var(--text-muted);">Brightness</label>
-              <input type="range" id="shadeLightness" min="0" max="100" value="50" step="1" title="Lightness">
-              <label style="font-size: 0.65rem; color: var(--text-muted); margin-top: 5px;">Saturation</label>
-              <input type="range" id="shadeSaturation" min="0" max="100" value="100" step="1" title="Saturation">
+            <div class="form-group" style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-glass);">
+              <label for="drawPaintColor" style="font-size: 0.75rem; color: var(--text-muted);">Custom Color</label>
+              <input type="color" id="drawPaintColor" value="#7c5cfc" style="width: 100%; height: 36px; border: none; border-radius: 4px; cursor: pointer; padding: 0;">
             </div>
 
             <div id="paletteFlyoutGrid" class="palette-container">
@@ -382,5 +380,7 @@
       });
     }
   </script>
+  <!-- Add the color drop indicator at the bottom of the body -->
+  <div id="colorDropIndicator" class="color-drop-indicator"></div>
 </body>
 </html>

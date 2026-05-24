@@ -74,8 +74,6 @@
         const btnCanvasDraw = document.getElementById('btnCanvasDraw');
         const drawBrushSize = document.getElementById('drawBrushSize');
         const drawBrushSizeVal = document.getElementById('drawBrushSizeVal');
-        const shadeLightness = document.getElementById('shadeLightness');
-        const shadeSaturation = document.getElementById('shadeSaturation');
         const paletteFlyoutGrid = document.getElementById('paletteFlyoutGrid');
         const btnQuickEraser = document.getElementById('btnQuickEraser');
         const btnFillTool = document.getElementById('btnFillTool');
@@ -828,16 +826,7 @@
                     el.className = 'palette-color';
                     el.style.backgroundColor = color;
                     el.onclick = () => {
-                        if (isFlyout) {
-                            state.lastBaseColor = color;
-                            // Sync shade sliders to the actual HSL of the selected color
-                            // so clicking a swatch always gives the exact color shown.
-                            const hsl = hexToHSL(color);
-                            shadeLightness.value = hsl.l;
-                            shadeSaturation.value = hsl.s;
-                        }
-                        const finalColor = isFlyout ? applyShades(color) : color;
-                        updateAppColor(finalColor);
+                        updateAppColor(color);
                         if (isFlyout) {
                             colorPickerFlyout.classList.remove('active');
                         }
@@ -856,53 +845,14 @@
             // Update hex input if possible, otherwise it stays at last valid hex
             if (color.startsWith('#')) {
                 paintInputs.paintColor.value = color;
+                const drawColorEl = document.getElementById('drawPaintColor');
+                if (drawColorEl) drawColorEl.value = color;
             }
             colorDot.style.backgroundColor = color;
             document.querySelectorAll('.palette-color').forEach(c => {
                 if (c.style.backgroundColor === color) c.classList.add('active');
                 else c.classList.remove('active');
             });
-        }
-
-
-        function applyShades(baseColor) {
-            // Convert hex to HSL, apply sliders, convert back
-            const l = shadeLightness.value;
-            const s = shadeSaturation.value;
-            return `hsl(${getHue(baseColor)}, ${s}%, ${l}%)`;
-        }
-
-        function getHue(hex) {
-            let r = parseInt(hex.slice(1, 3), 16) / 255;
-            let g = parseInt(hex.slice(3, 5), 16) / 255;
-            let b = parseInt(hex.slice(5, 7), 16) / 255;
-            let max = Math.max(r, g, b), min = Math.min(r, g, b);
-            let h;
-            if (max === min) h = 0;
-            else if (max === r) h = (g - b) / (max - min) + (g < b ? 6 : 0);
-            else if (max === g) h = (b - r) / (max - min) + 2;
-            else h = (r - g) / (max - min) + 4;
-            return Math.round(h * 60);
-        }
-
-        // Returns { h, s, l } in degrees / percent — used to sync shade sliders on palette click
-        function hexToHSL(hex) {
-            let r = parseInt(hex.slice(1, 3), 16) / 255;
-            let g = parseInt(hex.slice(3, 5), 16) / 255;
-            let b = parseInt(hex.slice(5, 7), 16) / 255;
-            let max = Math.max(r, g, b), min = Math.min(r, g, b);
-            let h, s, l = (max + min) / 2;
-            if (max === min) {
-                h = 0; s = 0;
-            } else {
-                const d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
-                else if (max === g) h = (b - r) / d + 2;
-                else h = (r - g) / d + 4;
-                h *= 60;
-            }
-            return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
         }
 
         initPalette();
@@ -995,10 +945,69 @@
             normalCanvasContainer.appendChild(canvasContainer);
         };
 
-        colorDot.onclick = (e) => {
+        let isColorDragging = false;
+        let colorDragStartPos = null;
+        const colorDropIndicator = document.getElementById('colorDropIndicator');
+
+        colorDot.addEventListener('pointerdown', (e) => {
             e.stopPropagation();
-            colorPickerFlyout.classList.toggle('active');
-        };
+            isColorDragging = true;
+            colorDragStartPos = { x: e.clientX, y: e.clientY };
+            
+            if (colorDropIndicator) {
+                colorDropIndicator.style.backgroundColor = state.activeColor;
+                colorDropIndicator.style.left = `${e.clientX}px`;
+                colorDropIndicator.style.top = `${e.clientY}px`;
+            }
+            
+            colorDot.setPointerCapture(e.pointerId);
+        });
+
+        colorDot.addEventListener('pointermove', (e) => {
+            if (!isColorDragging) return;
+            
+            const dx = e.clientX - colorDragStartPos.x;
+            const dy = e.clientY - colorDragStartPos.y;
+            if (Math.sqrt(dx*dx + dy*dy) > 10 && colorDropIndicator) {
+                colorDropIndicator.style.display = 'block';
+                colorPickerFlyout.classList.remove('active');
+            }
+            
+            if (colorDropIndicator && colorDropIndicator.style.display === 'block') {
+                colorDropIndicator.style.left = `${e.clientX}px`;
+                colorDropIndicator.style.top = `${e.clientY}px`;
+            }
+        });
+
+        colorDot.addEventListener('pointerup', (e) => {
+            if (!isColorDragging) return;
+            isColorDragging = false;
+            colorDot.releasePointerCapture(e.pointerId);
+            
+            if (colorDropIndicator && colorDropIndicator.style.display === 'block') {
+                // Drop happened
+                colorDropIndicator.style.display = 'none';
+                
+                // Hide indicator temporarily to find elements underneath
+                const elements = document.elementsFromPoint(e.clientX, e.clientY);
+                if (elements.includes(canvasContainer) || elements.some(el => el.tagName === 'CANVAS')) {
+                    const mockEvent = { clientX: e.clientX, clientY: e.clientY };
+                    const [x, y] = getCoords(mockEvent);
+                    
+                    saveState();
+                    executeSymmetricFill(x, y);
+                    
+                    if (state.layers[state.activeLayerIdx]) {
+                        updateThumb(state.layers[state.activeLayerIdx].id);
+                    }
+                }
+            } else {
+                // Just a tap
+                colorPickerFlyout.classList.toggle('active');
+            }
+        });
+
+        colorDot.addEventListener('click', (e) => e.stopPropagation());
 
         window.addEventListener('click', () => {
             colorPickerFlyout.classList.remove('active');
@@ -1032,9 +1041,15 @@
         });
 
         paintInputs.paintColor.oninput = () => {
-            state.activeColor = paintInputs.paintColor.value;
-            colorDot.style.backgroundColor = state.activeColor;
+            updateAppColor(paintInputs.paintColor.value);
         };
+
+        const drawPaintColorEl = document.getElementById('drawPaintColor');
+        if (drawPaintColorEl) {
+            drawPaintColorEl.oninput = () => {
+                updateAppColor(drawPaintColorEl.value);
+            };
+        }
 
         if (btnQuickEraser) {
             btnQuickEraser.onclick = () => {
@@ -1118,12 +1133,6 @@
             };
         }
 
-
-        shadeLightness.oninput = shadeSaturation.oninput = () => {
-            if (state.lastBaseColor) {
-                updateAppColor(applyShades(state.lastBaseColor));
-            }
-        };
 
         // --- Zoom & Pan Logic (Hardware Accelerated) ---
 
