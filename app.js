@@ -557,11 +557,9 @@
 
         // Painting Logic
         function getNaturalRect() {
-            const drawCanvasContainer = document.getElementById('drawCanvasContainer');
-            const parentRect = drawCanvasContainer.getBoundingClientRect();
             return {
-                left: parentRect.left + canvasContainer.offsetLeft,
-                top: parentRect.top + canvasContainer.offsetTop,
+                left: canvasContainer.offsetLeft,
+                top: canvasContainer.offsetTop,
                 width: canvasContainer.offsetWidth,
                 height: canvasContainer.offsetHeight
             };
