@@ -103,7 +103,7 @@
             lastTouchX: 0,
             lastTouchY: 0,
             // Erase Mode: false = local (touch-point only), true = symmetric (all axes)
-            symEraseMode: false,
+            symEraseMode: true,
             // Grid Visibility
             gridVisible: true,
             activeColor: '#7c5cfc',
@@ -864,7 +864,11 @@
             const eraserCursor = document.getElementById('eraserCursor');
             if (state.isEraser && eraserCursor && drawModeOverlay.classList.contains('active')) {
                 eraserCursor.style.display = 'block';
-                const size = Math.max(10, paintInputs.brushSize.value);
+                const nat = getNaturalRect();
+                const gridCanvas = document.getElementById('mandalaCanvas');
+                const totalPx = gridCanvas.width / state.zoomScale;
+                const displayScale = (nat.width / totalPx) * state.zoom;
+                const size = paintInputs.brushSize.value * displayScale;
                 eraserCursor.style.width = size + 'px';
                 eraserCursor.style.height = size + 'px';
                 eraserCursor.style.left = e.clientX + 'px';
@@ -1002,8 +1006,11 @@
                     }
                 }
             } else {
-                // Just a tap
-                colorPickerFlyout.classList.toggle('active');
+                // Just a tap -> open native color picker
+                const colorInput = document.getElementById('drawPaintColor');
+                if (colorInput) {
+                    colorInput.click();
+                }
             }
         });
 
@@ -1026,11 +1033,11 @@
         const btnBrushInc = document.getElementById('btnBrushInc');
         if (btnBrushDec && btnBrushInc) {
             btnBrushDec.onclick = () => {
-                drawBrushSize.value = Math.max(parseInt(drawBrushSize.min) || 1, parseInt(drawBrushSize.value) - 1);
+                drawBrushSize.value = Math.max(parseInt(drawBrushSize.min) || 1, parseInt(drawBrushSize.value) - 6);
                 drawBrushSize.oninput();
             };
             btnBrushInc.onclick = () => {
-                drawBrushSize.value = Math.min(parseInt(drawBrushSize.max) || 200, parseInt(drawBrushSize.value) + 1);
+                drawBrushSize.value = Math.min(parseInt(drawBrushSize.max) || 200, parseInt(drawBrushSize.value) + 6);
                 drawBrushSize.oninput();
             };
         }
@@ -1086,6 +1093,10 @@
         // Symmetric Erase toggle
         const btnSymErase = document.getElementById('btnSymErase');
         if (btnSymErase) {
+            btnSymErase.classList.toggle('active-sym-erase', state.symEraseMode);
+            btnSymErase.title = state.symEraseMode
+                ? 'Sym Erase ON — eraser follows all symmetry lines'
+                : 'Sym Erase OFF — eraser only erases at touch point';
             btnSymErase.onclick = () => {
                 state.symEraseMode = !state.symEraseMode;
                 btnSymErase.classList.toggle('active-sym-erase', state.symEraseMode);
