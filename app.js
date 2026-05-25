@@ -1000,14 +1000,10 @@
                     
                     saveState();
                     executeSymmetricFill(x, y);
-                    
-                    if (state.layers[state.activeLayerIdx]) {
-                        updateThumb(state.layers[state.activeLayerIdx].id);
-                    }
                 }
             } else {
                 // Just a tap -> open native color picker
-                const colorInput = document.getElementById('drawPaintColor');
+                const colorInput = document.getElementById('paintColor');
                 if (colorInput) {
                     colorInput.click();
                 }
