@@ -978,11 +978,13 @@
             }
             
             if (colorDropIndicator && colorDropIndicator.style.display === 'block') {
+                wasColorDragged = true;
                 colorDropIndicator.style.left = `${e.clientX}px`;
                 colorDropIndicator.style.top = `${e.clientY}px`;
             }
         });
 
+        let wasColorDragged = false;
         colorDot.addEventListener('pointerup', (e) => {
             if (!isColorDragging) return;
             isColorDragging = false;
@@ -1001,16 +1003,19 @@
                     saveState();
                     executeSymmetricFill(x, y);
                 }
-            } else {
-                // Just a tap -> open native color picker
+            }
+        });
+
+        colorDot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!wasColorDragged) {
                 const colorInput = document.getElementById('paintColor');
                 if (colorInput) {
                     colorInput.click();
                 }
             }
+            wasColorDragged = false;
         });
-
-        colorDot.addEventListener('click', (e) => e.stopPropagation());
 
         window.addEventListener('click', () => {
             colorPickerFlyout.classList.remove('active');
